@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1
+#
+# ronaldo-agent image — a reference A2A agent.
+#
+# Separate image because it is a *backend the orchestrator may route to*, not part of the
+# orchestrator. It needs FastAPI + uvicorn and nothing else: no LangGraph, no psycopg, no
+# gateway key. Copying `examples/ronaldo_agent` and running it from source keeps the image
+# small and makes the agent trivially replaceable by a real one.
+#
+# RONALDO_AGENT_URL rewrites the `url` in the agent card. That matters in containers: the
+# card the *gateway* fetches must advertise an address the gateway can reach, which is
+# rarely localhost. With the compose stack that is http://ronaldo-agent:9103.
+#
+# Build:
+#   docker build -f deploy/Dockerfile.ronaldo-agent -t a2a-ronaldo-agent:0.1.0 .
+# Run:
+#   docker run --rm -p 9103:9103 \
+#     -e RONALDO_AGENT_URL=http://host.docker.internal:9103 \
+#     a2a-ronaldo-agent:0.1.0
+
+ARG PYTHON_VERSION=3.12
+
+FROM python:${PYTHON_VERSION}-slim
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/examples \
+    # Advertised on the card. Override to the address the gateway resolves.
+    RONALDO_AGENT_URL=""
+
+WORKDIR /app
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --create-home --uid 10001 --shell /usr/sbin/nologin agent
+
+RUN python -m pip install "fastapi>=0.115" "uvicorn>=0.30"
+
+COPY --chown=agent:agent examples/ronaldo_agent ./examples/ronaldo_agent
+
+USER agent
+
+EXPOSE 9103
+
+# The agent publishes a card at the well-known path; a 200 here means the app is up and
+# serving, which is exactly the readiness question.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:9103/.well-known/agent-card.json > /dev/null || exit 1
+
+CMD ["python", "-m", "uvicorn", "ronaldo_agent.server:app", "--host", "0.0.0.0", "--port", "9103"]

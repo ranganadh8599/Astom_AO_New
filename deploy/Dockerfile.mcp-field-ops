@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1
+#
+# field-ops MCP server image.
+#
+# Separate from the orchestrator image on purpose: this is a *fixture* server that stands
+# in for a real MCP backend. It has one dependency (`mcp`), no LangGraph, no gateway, and
+# no secrets — so it builds in seconds and can be replaced or dropped without touching the
+# orchestration layer.
+#
+# It serves streamable HTTP at /mcp and is stateless, so the gateway never holds a session
+# against a container that may have been recreated.
+#
+# Build:
+#   docker build -f deploy/Dockerfile.mcp-field-ops -t a2a-mcp-field-ops:0.1.0 .
+# Run:
+#   docker run --rm -p 9200:9200 a2a-mcp-field-ops:0.1.0
+
+ARG PYTHON_VERSION=3.12
+
+FROM python:${PYTHON_VERSION}-slim
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    # The package is used from source: only `mcp` is installed, so this image stays small
+    # and does not drag in LangGraph or FastAPI.
+    PYTHONPATH=/app/examples
+
+WORKDIR /app
+
+RUN apt-get update \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --create-home --uid 10001 --shell /usr/sbin/nologin mcp
+
+# Pinned by the extra in pyproject so the version here and the tested version agree.
+COPY pyproject.toml ./
+RUN python -m pip install "mcp>=1.9"
+
+COPY --chown=mcp:mcp examples/mcp_field_ops ./examples/mcp_field_ops
+
+USER mcp
+
+EXPOSE 9200
+
+# The MCP endpoint is a *streamable* HTTP transport: GET /mcp answers 200 and then holds
+# the connection open, so any check that waits for the body times out. A TCP connect is
+# the honest readiness question for this server ("is it accepting connections"), and it
+# cannot hang.
+HEALTHCHECK --interval=30s --timeout=6s --start-period=10s --retries=3 \
+    CMD python -c "import socket,sys; s=socket.create_connection(('127.0.0.1',9200),3); s.close()" || exit 1
+
+CMD ["python", "-m", "mcp_field_ops.server", "--host", "0.0.0.0", "--port", "9200"]

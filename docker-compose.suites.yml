@@ -1,0 +1,605 @@
+# GENERATED FILE — do not edit by hand.
+# Regenerate with:  python deploy/gen_suites_compose.py
+#
+# Every A2A agent (9110-9129) and MCP server (9301-9320) from examples/*/catalog.py as
+# its own container. One image, 40 services, one process each.
+#
+#   docker build -f deploy/Dockerfile.examples -t a2a-examples:0.1.0 .
+#   docker compose -f docker-compose.suites.yml up -d
+#   .\.venv\Scripts\python.exe deploy/register_examples.py --grant
+#
+# The gateway reaches a service by NAME on the shared network (the same network the
+# gateway's own compose project created), which is why each A2A card advertises
+# ``http://a2a-<id>:<port>`` and each MCP server is registered as
+# ``http://mcp-<id>:<port>/mcp``. A card that advertised localhost would be unreachable
+# from the gateway — the classic "works locally, 500s in the gateway" failure.
+#
+# Nothing is published to the host by default: the gateway dials the service name, and 40
+# published ports would collide with the host-run suites. To debug one service from the
+# host, add a ports mapping under it, e.g. ``ports: ["9110:9110"]``.
+
+name: a2a-suites
+
+x-suite: &suite
+  image: ${SUITES_IMAGE:-a2a-examples:0.1.0}
+  build:
+    context: .
+    dockerfile: deploy/Dockerfile.examples
+  restart: unless-stopped
+  # The suites never need to write to disk or escalate.
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - default
+    - gateway
+
+services:
+
+  a2a-bicycle-repair:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "bicycle-repair"
+      - "--port"
+      - "9110"
+      - "--url"
+      - "http://a2a-bicycle-repair:9110"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9110"
+
+  a2a-sourdough-baking:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "sourdough-baking"
+      - "--port"
+      - "9111"
+      - "--url"
+      - "http://a2a-sourdough-baking:9111"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9111"
+
+  a2a-night-sky-astronomy:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "night-sky-astronomy"
+      - "--port"
+      - "9112"
+      - "--url"
+      - "http://a2a-night-sky-astronomy:9112"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9112"
+
+  a2a-bird-migration:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "bird-migration"
+      - "--port"
+      - "9113"
+      - "--url"
+      - "http://a2a-bird-migration:9113"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9113"
+
+  a2a-chess-openings:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "chess-openings"
+      - "--port"
+      - "9114"
+      - "--url"
+      - "http://a2a-chess-openings:9114"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9114"
+
+  a2a-knitting:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "knitting"
+      - "--port"
+      - "9115"
+      - "--url"
+      - "http://a2a-knitting:9115"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9115"
+
+  a2a-wine-pairing:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "wine-pairing"
+      - "--port"
+      - "9116"
+      - "--url"
+      - "http://a2a-wine-pairing:9116"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9116"
+
+  a2a-electrical-safety:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "electrical-safety"
+      - "--port"
+      - "9117"
+      - "--url"
+      - "http://a2a-electrical-safety:9117"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9117"
+
+  a2a-volcano-geology:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "volcano-geology"
+      - "--port"
+      - "9118"
+      - "--url"
+      - "http://a2a-volcano-geology:9118"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9118"
+
+  a2a-calligraphy:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "calligraphy"
+      - "--port"
+      - "9119"
+      - "--url"
+      - "http://a2a-calligraphy:9119"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9119"
+
+  a2a-jazz-improvisation:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "jazz-improvisation"
+      - "--port"
+      - "9120"
+      - "--url"
+      - "http://a2a-jazz-improvisation:9120"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9120"
+
+  a2a-marathon-training:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "marathon-training"
+      - "--port"
+      - "9121"
+      - "--url"
+      - "http://a2a-marathon-training:9121"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9121"
+
+  a2a-container-stowage:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "container-stowage"
+      - "--port"
+      - "9122"
+      - "--url"
+      - "http://a2a-container-stowage:9122"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9122"
+
+  a2a-beekeeping:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "beekeeping"
+      - "--port"
+      - "9123"
+      - "--url"
+      - "http://a2a-beekeeping:9123"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9123"
+
+  a2a-legal-citation:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "legal-citation"
+      - "--port"
+      - "9124"
+      - "--url"
+      - "http://a2a-legal-citation:9124"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9124"
+
+  a2a-api-versioning:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "api-versioning"
+      - "--port"
+      - "9125"
+      - "--url"
+      - "http://a2a-api-versioning:9125"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9125"
+
+  a2a-photography-exposure:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "photography-exposure"
+      - "--port"
+      - "9126"
+      - "--url"
+      - "http://a2a-photography-exposure:9126"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9126"
+
+  a2a-wilderness-first-aid:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "wilderness-first-aid"
+      - "--port"
+      - "9127"
+      - "--url"
+      - "http://a2a-wilderness-first-aid:9127"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9127"
+
+  a2a-tea-ceremony:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "tea-ceremony"
+      - "--port"
+      - "9128"
+      - "--url"
+      - "http://a2a-tea-ceremony:9128"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9128"
+
+  a2a-railway-signalling:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "a2a_suite.server"
+      - "--agent"
+      - "railway-signalling"
+      - "--port"
+      - "9129"
+      - "--url"
+      - "http://a2a-railway-signalling:9129"
+    environment:
+      SUITE_KIND: a2a
+      PORT: "9129"
+
+  mcp-warehouse-inventory:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.warehouse_inventory"
+      - "--port"
+      - "9301"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9301"
+
+  mcp-payroll-payslips:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.payroll_payslips"
+      - "--port"
+      - "9302"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9302"
+
+  mcp-flight-status:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.flight_status"
+      - "--port"
+      - "9303"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9303"
+
+  mcp-hotel-availability:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.hotel_availability"
+      - "--port"
+      - "9304"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9304"
+
+  mcp-library-catalogue:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.library_catalogue"
+      - "--port"
+      - "9305"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9305"
+
+  mcp-lab-sample-tracking:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.lab_sample_tracking"
+      - "--port"
+      - "9306"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9306"
+
+  mcp-fleet-telematics:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.fleet_telematics"
+      - "--port"
+      - "9307"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9307"
+
+  mcp-clinic-appointments:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.clinic_appointments"
+      - "--port"
+      - "9308"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9308"
+
+  mcp-support-queue:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.support_queue"
+      - "--port"
+      - "9309"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9309"
+
+  mcp-fx-rates:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.fx_rates"
+      - "--port"
+      - "9310"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9310"
+
+  mcp-subscription-billing:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.subscription_billing"
+      - "--port"
+      - "9311"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9311"
+
+  mcp-crop-harvest:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.crop_harvest"
+      - "--port"
+      - "9312"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9312"
+
+  mcp-water-quality:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.water_quality"
+      - "--port"
+      - "9313"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9313"
+
+  mcp-parcel-tracking:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.parcel_tracking"
+      - "--port"
+      - "9314"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9314"
+
+  mcp-meeting-rooms:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.meeting_rooms"
+      - "--port"
+      - "9315"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9315"
+
+  mcp-bridge-inspection:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.bridge_inspection"
+      - "--port"
+      - "9316"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9316"
+
+  mcp-customs-tariff:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.customs_tariff"
+      - "--port"
+      - "9317"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9317"
+
+  mcp-course-completions:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.course_completions"
+      - "--port"
+      - "9318"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9318"
+
+  mcp-parking-occupancy:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.parking_occupancy"
+      - "--port"
+      - "9319"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9319"
+
+  mcp-cold-chain-temperature:
+    <<: *suite
+    command:
+      - "python"
+      - "-m"
+      - "mcp_suite.servers.cold_chain_temperature"
+      - "--port"
+      - "9320"
+    environment:
+      SUITE_KIND: mcp
+      PORT: "9320"
+
+
+networks:
+  default:
+  # The network the LiteLLM gateway already created. `external` means compose expects it to
+  # exist and will not create or delete it. Verify with: docker network ls
+  gateway:
+    external: true
+    name: ${GATEWAY_NETWORK:-litellm-gateway_default}

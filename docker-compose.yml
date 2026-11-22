@@ -1,0 +1,152 @@
+# Orchestration stack: orchestrator + its own Postgres + the two reference backends.
+#
+#   docker compose up -d --build
+#   docker compose ps
+#   curl -s localhost:8000/health | jq
+#
+# What is deliberately NOT here
+# -----------------------------
+# The LiteLLM gateway is not in this file. It is already running as its own compose
+# project (`litellm-gateway-litellm-1`, published on 127.0.0.1:4001) and it owns the
+# agent/MCP registry, the virtual keys and the model list. Starting a second gateway would
+# create two sources of truth.
+#
+# Instead the orchestrator reaches the existing one, either
+#   a) by joining the gateway's network (the `gateway` network below), so it can use
+#      http://litellm:4000 — no host round-trip, and the gateway can reach `field-ops`
+#      and `ronaldo-agent` by name; or
+#   b) over the host, with LITELLM_BASE_URL=http://host.docker.internal:4001, which works
+#      on Docker Desktop but not on plain Linux without extra_hosts.
+#
+# Option (a) is the default here. If that network is absent on your machine, either create
+# it (`docker network create litellm-gateway_default`) or comment the block out and use
+# (b) — see LITELLM_BASE_URL below.
+
+name: agent-orchestration
+
+services:
+  # -- conversation memory ---------------------------------------------------
+  # Its own database, separate from the gateway's. Nothing is shared between them.
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: ${POSTGRES_DB:-orchestrator}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # No published port: only the orchestrator needs this database. Uncomment to inspect
+    # it with psql from the host.
+    # ports: ["5433:5432"]
+    healthcheck:
+      # -d must name the application database, otherwise pg_isready reports ready while
+      # the database the orchestrator needs does not exist yet.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-orchestrator}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # -- the orchestration layer -----------------------------------------------
+  orchestrator:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: a2a-orchestrator:0.1.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${ORCHESTRATOR_PORT:-8000}:8000"
+    environment:
+      # --- gateway ---
+      # NOTE: docker compose reads the project `.env` for ${...} substitution, and that
+      # file is written for a process running ON THE HOST (LITELLM_BASE_URL=http://localhost:4001).
+      # Interpolating that directly would put a loopback address inside the container,
+      # where it can only ever fail. Hence GATEWAY_URL as the container-facing input.
+      #
+      # (a) shared network: service name + internal port.
+      LITELLM_BASE_URL: ${GATEWAY_URL:-http://litellm:4000}
+      # (b) host route, when the gateway is not on a shared network:
+      # LITELLM_BASE_URL: http://host.docker.internal:4001   # needs the extra_hosts below
+      LITELLM_API_KEY: ${LITELLM_API_KEY:?set LITELLM_API_KEY in .env or the shell}
+
+      # --- routing (required: there is no heuristic fallback) ---
+      PLANNER_MODEL: ${PLANNER_MODEL:-openai/gpt-4o-mini}
+      PLANNER_TEMPERATURE: ${PLANNER_TEMPERATURE:-0}
+      GATE_MODEL: ${GATE_MODEL:-openai/gpt-4o-mini}
+      COVERAGE_GATE_ENABLED: ${COVERAGE_GATE_ENABLED:-true}
+
+      # --- read-only policy ---
+      READ_ONLY_MODE: ${READ_ONLY_MODE:-true}
+
+      # --- memory: Postgres, inside this compose network ---
+      CHECKPOINT_BACKEND: postgres
+      POSTGRES_DSN: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin}@db:5432/${POSTGRES_DB:-orchestrator}
+      # Creates the database and LangGraph's tables on first boot.
+      POSTGRES_AUTO_CREATE: ${POSTGRES_AUTO_CREATE:-1}
+
+      # --- auth: LibreChat shared key + unsigned user header ---
+      AUTH_MODE: ${AUTH_MODE:-shared_key}
+      ORCH_SHARED_KEY: ${ORCH_SHARED_KEY:-}
+      SHARED_KEY_ROLES: ${SHARED_KEY_ROLES:-AgentUser}
+
+      # --- optional: model targets and tracing ---
+      MODEL_TARGETS: ${MODEL_TARGETS:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL:-}
+      LANGFUSE_ENVIRONMENT: ${LANGFUSE_ENVIRONMENT:-dev}
+      LANGFUSE_USER_ID_FIELD: ${LANGFUSE_USER_ID_FIELD:-oid}
+    # Makes option (b) work on plain Linux, where host.docker.internal is not defined.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # The gateway's network. `external: true` means compose expects it to exist and will
+    # not create or delete it.
+    networks:
+      - default
+      - gateway
+
+  # -- reference MCP backend -------------------------------------------------
+  field-ops:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.mcp-field-ops
+    image: a2a-mcp-field-ops:0.1.0
+    restart: unless-stopped
+    ports:
+      - "${FIELD_OPS_PORT:-9200}:9200"
+    networks:
+      - default
+      - gateway
+
+  # -- reference A2A backend -------------------------------------------------
+  ronaldo-agent:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.ronaldo-agent
+    image: a2a-ronaldo-agent:0.1.0
+    restart: unless-stopped
+    ports:
+      - "${RONALDO_PORT:-9103}:9103"
+    environment:
+      # The card must advertise an address the GATEWAY can reach, not localhost. With the
+      # shared network that is the service name. If you run the gateway outside Docker,
+      # set this to http://host.docker.internal:9103 instead.
+      RONALDO_AGENT_URL: ${RONALDO_AGENT_URL:-http://ronaldo-agent:9103}
+    networks:
+      - default
+      - gateway
+
+volumes:
+  pgdata:
+
+networks:
+  default:
+  gateway:
+    # The network created by the gateway's own compose project.
+    # Verify with: docker network ls | grep litellm
+    external: true
+    name: ${GATEWAY_NETWORK:-litellm-gateway_default}

@@ -1,0 +1,38 @@
+{
+  "name": "ronaldo-agent",
+  "description": "Answers questions about Cristiano Ronaldo: who he is, his biography, career history, records and achievements.",
+  "url": "http://localhost:9103",
+  "version": "1.0.0",
+  "protocolVersion": "0.3",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "provider": {
+    "organization": "A2A Orchestration POC",
+    "url": "http://localhost:9103"
+  },
+  "skills": [
+    {
+      "id": "biography",
+      "name": "Biography",
+      "description": "Who Cristiano Ronaldo is: full name, birth, birthplace, early life and family background.",
+      "tags": ["biography", "ronaldo", "early-life", "family"]
+    },
+    {
+      "id": "career",
+      "name": "Career history",
+      "description": "Club career from Sporting CP through Manchester United, Real Madrid, Juventus and Al Nassr, plus the Portugal national team.",
+      "tags": ["career", "clubs", "transfers", "portugal"]
+    },
+    {
+      "id": "records",
+      "name": "Records and awards",
+      "description": "Goalscoring records, Ballon d'Or wins, Champions League and international records.",
+      "tags": ["records", "awards", "goals", "ballon-dor"]
+    }
+  ]
+}

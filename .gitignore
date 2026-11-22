@@ -1,0 +1,21 @@
+# local secrets
+.env
+.env.local
+*.env
+check.json
+check.err
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# a full LibreChat checkout (208k files) is not part of this project
+librechat/
+
+# local scratch from smoke tests
+.tmp-logs/

@@ -1,0 +1,17 @@
+# Labelled questions for the sample agents. Copy to golden.jsonl and replace with questions
+# your users really ask, using your own agent and tool names. 30-50 rows is a good start.
+#
+#   expect : target names that should appear in the shortlist (tool names may be unprefixed)
+#   none   : true when NO registered target can answer
+#   intent : optional, "read" or "mutation"
+#   history: earlier turns, to test follow-ups
+{"id": "bio-1", "query": "Where was Cristiano Ronaldo born?", "expect": ["ronaldo-agent"], "intent": "read"}
+{"id": "records-1", "query": "How many Ballon d'Or awards has he won?", "expect": ["ronaldo-agent"], "history": [{"role": "user", "content": "Tell me about Cristiano Ronaldo"}, {"role": "assistant", "content": "He is a Portuguese footballer."}]}
+{"id": "career-1", "query": "Which clubs did Ronaldo play for before Al Nassr?", "expect": ["ronaldo-agent"]}
+{"id": "followup-1", "query": "and for Juventus?", "expect": ["ronaldo-agent"], "history": [{"role": "user", "content": "How many goals did Ronaldo score for Real Madrid?"}, {"role": "assistant", "content": "450 in all competitions."}]}
+{"id": "asset-1", "query": "What is the status of asset PUMP-17?", "expect": ["get_asset_status"]}
+{"id": "incidents-1", "query": "List the open incidents at the Pune site", "expect": ["list_open_incidents"]}
+{"id": "multi-1", "query": "How many Ballon d'Ors did Ronaldo win? Also, what is the status of asset PUMP-17?", "expect": ["ronaldo-agent", "get_asset_status"]}
+{"id": "none-1", "query": "What is the boiling point of liquid nitrogen?", "none": true}
+{"id": "none-2", "query": "Who won the 2022 Formula 1 championship?", "none": true}
+{"id": "write-1", "query": "Delete incident INC-204 from the Pune site", "expect": ["list_open_incidents"], "intent": "mutation"}

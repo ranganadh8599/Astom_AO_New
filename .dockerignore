@@ -1,0 +1,39 @@
+# Build context hygiene. The image needs pyproject.toml and src/, nothing else.
+# Without this, .venv (hundreds of MB) and the 400 KB Postman collection are uploaded to
+# the daemon on every build.
+
+# virtualenv / caches
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+wheels/
+
+# local secrets — never bake .env into an image
+.env
+.env.local
+*.env
+
+# local state and logs
+orch.out
+orch.err
+check.json
+check.err
+
+# docs, tests and tooling are not part of any runtime image
+tests/
+docs/
+*.md
+!README.md
+
+# vcs / editor
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# postman collections live in docs/ but are called out explicitly because they are large
+*.postman_collection.json

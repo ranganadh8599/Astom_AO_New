@@ -1,0 +1,80 @@
+# Labelled questions for the full example suites (20 A2A agents + 20 MCP servers).
+# One JSON object per line. Run:
+#   .\.venv\Scripts\python.exe evals/run_retrieval_eval.py --golden evals/golden.jsonl
+#
+# expect : target names that must appear in the shortlist. A2A = agent id.
+#          MCP = tool name (the suite serves one target per tool).
+# none   : true when no registered target can answer.
+# intent : pins the gate's triage ("read" | "mutation" | "smalltalk").
+# history: earlier turns, to exercise follow-up rewriting.
+
+# --- A2A agents (one per suite agent) ---------------------------------------
+{"id": "a2a-bicycle", "query": "how do I check chain wear?", "expect": ["bicycle-repair"]}
+{"id": "a2a-sourdough", "query": "how long should bulk fermentation take?", "expect": ["sourdough-baking"]}
+{"id": "a2a-astronomy", "query": "which constellations are visible in winter?", "expect": ["night-sky-astronomy"]}
+{"id": "a2a-birds", "query": "what is a flyway?", "expect": ["bird-migration"]}
+{"id": "a2a-chess", "query": "what is the idea behind the Sicilian Defence?", "expect": ["chess-openings"]}
+{"id": "a2a-knitting", "query": "how do I fix my stitch gauge?", "expect": ["knitting"]}
+{"id": "a2a-wine", "query": "what wine goes with steak?", "expect": ["wine-pairing"]}
+{"id": "a2a-electrical", "query": "how do I prove a circuit is dead before working on it?", "expect": ["electrical-safety"]}
+{"id": "a2a-volcano", "query": "what is a lahar?", "expect": ["volcano-geology"]}
+{"id": "a2a-calligraphy", "query": "which nib should I use for italic script?", "expect": ["calligraphy"]}
+{"id": "a2a-jazz", "query": "how do I solo over a ii-V-I?", "expect": ["jazz-improvisation"]}
+{"id": "a2a-marathon", "query": "how long should my longest run be before a marathon?", "expect": ["marathon-training"]}
+{"id": "a2a-containers", "query": "what is verified gross mass?", "expect": ["container-stowage"]}
+{"id": "a2a-bees", "query": "how often should I inspect for swarm cells?", "expect": ["beekeeping"]}
+{"id": "a2a-legal", "query": "how do I cite a journal article?", "expect": ["legal-citation"]}
+{"id": "a2a-api", "query": "when is an API change breaking?", "expect": ["api-versioning"]}
+{"id": "a2a-photo", "query": "what does one stop mean in exposure?", "expect": ["photography-exposure"]}
+{"id": "a2a-firstaid", "query": "how do I splint a broken leg in the field?", "expect": ["wilderness-first-aid"]}
+{"id": "a2a-tea", "query": "what is a chasen for?", "expect": ["tea-ceremony"]}
+{"id": "a2a-rail", "query": "what is absolute block working?", "expect": ["railway-signalling"]}
+
+# --- MCP tools (one per suite server) --------------------------------------
+{"id": "mcp-stock", "query": "how many SKU-4471 do we have in the warehouse?", "expect": ["get_stock_level"]}
+{"id": "mcp-pay", "query": "what was E-1042's net pay last month?", "expect": ["get_payslip"]}
+{"id": "mcp-flight", "query": "is BA2490 delayed?", "expect": ["get_flight_status"]}
+{"id": "mcp-hotel", "query": "any rooms free on 2026-12-03?", "expect": ["check_availability"]}
+{"id": "mcp-library", "query": "is ISBN 9780262033848 on the shelf?", "expect": ["find_by_isbn"]}
+{"id": "mcp-lab", "query": "has sample LAB-2026-0418 been resulted?", "expect": ["get_sample_status"]}
+{"id": "mcp-fleet", "query": "which delivery vehicles currently have fault codes?", "expect": ["list_vehicles_with_faults"]}
+{"id": "mcp-clinic", "query": "any free cardiology slots on 2026-11-24?", "expect": ["list_free_slots"]}
+{"id": "mcp-sla", "query": "which service-desk tickets have breached their SLA?", "expect": ["list_breached_tickets"]}
+{"id": "mcp-fx", "query": "convert 500 EUR to GBP", "expect": ["convert"]}
+{"id": "mcp-subscription", "query": "when does subscription ACC-7781 renew?", "expect": ["get_subscription"]}
+{"id": "mcp-harvest", "query": "what was the yield for FIELD-07-2026?", "expect": ["get_field_harvest"]}
+{"id": "mcp-water", "query": "are the chlorine readings at PLANT-EAST within limits?", "expect": ["get_water_reading"]}
+{"id": "mcp-parcel", "query": "where is parcel CN-8842-1180 now?", "expect": ["track_parcel"]}
+{"id": "mcp-room", "query": "which meeting room seats 12 and is free at 11:00?", "expect": ["find_free_room"]}
+{"id": "mcp-bridge", "query": "what is the defect severity on bridge BR-0207?", "expect": ["get_bridge_inspection"]}
+{"id": "mcp-customs", "query": "what duty rate applies to cotton t-shirts?", "expect": ["get_duty_rate"]}
+{"id": "mcp-training", "query": "which compliance certificates expire before 2026-12-01?", "expect": ["list_expiring_before"]}
+{"id": "mcp-parking", "query": "are there accessible bays free at PARK-RIVERSIDE?", "expect": ["find_accessible_bays"]}
+{"id": "mcp-coldchain", "query": "were there any cold-chain temperature excursions on the last trip?", "expect": ["list_excursions"]}
+
+# --- Follow-ups: the subject lives only in the conversation ---------------
+{"id": "fu-brakes", "query": "and what about the brakes?", "history": [{"role": "user", "content": "how do I check chain wear?"}], "expect": ["bicycle-repair"]}
+{"id": "fu-ronaldo-year", "query": "what about in 2016?", "history": [{"role": "user", "content": "how many goals did Ronaldo score for Real Madrid?"}], "expect": ["ronaldo-agent"]}
+{"id": "fu-deductions", "query": "and the deductions?", "history": [{"role": "user", "content": "what was E-1042's net pay?"}], "expect": ["get_deductions"]}
+{"id": "fu-reorder", "query": "is it below the reorder point?", "history": [{"role": "user", "content": "how many SKU-4471 do we have?"}], "expect": ["get_stock_level"]}
+{"id": "fu-cheapest", "query": "and the cheapest one?", "history": [{"role": "user", "content": "any rooms free on 2026-12-03?"}], "expect": ["cheapest_room"]}
+{"id": "fu-white-wine", "query": "what about a white instead?", "history": [{"role": "user", "content": "what wine goes with steak?"}], "expect": ["wine-pairing"]}
+{"id": "fu-slate", "query": "how do I fix that?", "history": [{"role": "user", "content": "my knitting stitches look uneven"}], "expect": ["knitting"]}
+{"id": "fu-parcel-date", "query": "when will it arrive?", "history": [{"role": "user", "content": "where is parcel CN-8842-1180?"}], "expect": ["track_parcel"]}
+
+# --- Nothing registered can answer ---------------------------------------
+{"id": "none-poem", "query": "write me a short poem about winter", "none": true}
+{"id": "none-capital", "query": "what is the capital of Mongolia?", "none": true}
+{"id": "none-translate", "query": "translate good morning into Japanese", "none": true}
+{"id": "none-headcount", "query": "how many employees does Microsoft have?", "none": true}
+{"id": "none-nitrogen", "query": "what is the boiling point of nitrogen?", "none": true}
+
+# --- Mutations: the policy must refuse, not route ------------------------
+{"id": "write-cancel-ticket", "query": "cancel ticket INC-204 immediately", "expect": ["get_ticket"], "intent": "mutation"}
+{"id": "write-reschedule", "query": "reschedule my cardiology appointment to Friday", "expect": ["list_free_slots"], "intent": "mutation"}
+{"id": "write-change-room", "query": "move the 11:00 booking to a bigger meeting room", "expect": ["find_free_room"], "intent": "mutation"}
+
+# --- Smalltalk: answered directly, never routed -------------------------
+{"id": "talk-hi", "query": "hi there", "none": true, "intent": "smalltalk"}
+{"id": "talk-thanks", "query": "thanks, that helps a lot", "none": true, "intent": "smalltalk"}
+{"id": "talk-who", "query": "what can you do?", "none": true, "intent": "smalltalk"}

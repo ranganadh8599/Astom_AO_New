@@ -1,0 +1,367 @@
+{
+  "info": {
+    "name": "A2A Orchestration POC - Ronaldo onboarding",
+    "description": "Onboard an A2A agent onto LiteLLM, grant a scoped key, smoke-test it, then call it through the orchestrator.\n\n1. Set collection variables (agent_base, gateway, admin_key, orchestrator_base).\n2. Run '1. Agent health' -> '2. Get agent card' to confirm the agent is up.\n3. Run '3. Register agent'. Its test script stores {{agent_id}} automatically.\n4. Run '4. Create scoped key'. Copy the returned key into {{orchestrator_key}}.\n5. Run '6. List agents (scoped key)' to confirm a 200 with the agent present.\n6. Run any of the smoke requests.\n7. Run '10. Orchestrate' for the end-to-end path.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "agent_base", "value": "http://localhost:9103", "type": "string" },
+    { "key": "gateway", "value": "http://localhost:4001", "type": "string" },
+    { "key": "orchestrator_base", "value": "http://localhost:8000", "type": "string" },
+    { "key": "admin_key", "value": "", "type": "string" },
+    { "key": "orchestrator_key", "value": "", "type": "string" },
+    { "key": "agent_id", "value": "", "type": "string" },
+    { "key": "agent_name", "value": "ronaldo-agent", "type": "string" },
+    { "key": "register_url", "value": "http://host.docker.internal:9103", "type": "string" },
+    { "key": "trace_id", "value": "", "type": "string" },
+    { "key": "user_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01. Agent - health (direct, not via gateway)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "{{agent_base}}/health",
+          "host": ["{{agent_base}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02. Agent - get agent card (direct)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "{{agent_base}}/.well-known/agent-card.json",
+          "host": ["{{agent_base}}"],
+          "path": [".well-known", "agent-card.json"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const card = pm.response.json();",
+              "pm.test('status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('card has name, description, skills', () => {",
+              "  pm.expect(card.name).to.be.a('string').and.not.empty;",
+              "  pm.expect(card.description).to.be.a('string').and.not.empty;",
+              "  pm.expect(card.skills).to.be.an('array').and.not.empty;",
+              "});",
+              "pm.test('card url matches what the gateway will call', () => {",
+              "  pm.expect(card.url).to.eql(pm.collectionVariables.get('register_url'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Gateway - register agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{admin_key}}" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agent_name\": \"ronaldo-agent\",\n  \"agent_card_params\": {\n    \"name\": \"ronaldo-agent\",\n    \"description\": \"Answers questions about Cristiano Ronaldo: who he is, his biography, career history, records and achievements.\",\n    \"url\": \"{{register_url}}\",\n    \"version\": \"1.0.0\",\n    \"protocolVersion\": \"0.3\",\n    \"capabilities\": {\n      \"streaming\": false,\n      \"pushNotifications\": false,\n      \"stateTransitionHistory\": false\n    },\n    \"defaultInputModes\": [\"text/plain\"],\n    \"defaultOutputModes\": [\"text/plain\"],\n    \"provider\": {\n      \"organization\": \"A2A Orchestration POC\",\n      \"url\": \"{{register_url}}\"\n    },\n    \"skills\": [\n      {\n        \"id\": \"biography\",\n        \"name\": \"Biography\",\n        \"description\": \"Who Cristiano Ronaldo is: full name, birth, birthplace, early life and family background.\",\n        \"tags\": [\"biography\", \"ronaldo\", \"early-life\", \"family\"]\n      },\n      {\n        \"id\": \"career\",\n        \"name\": \"Career history\",\n        \"description\": \"Club career from Sporting CP through Manchester United, Real Madrid, Juventus and Al Nassr, plus the Portugal national team.\",\n        \"tags\": [\"career\", \"clubs\", \"transfers\", \"portugal\"]\n      },\n      {\n        \"id\": \"records\",\n        \"name\": \"Records and awards\",\n        \"description\": \"Goalscoring records, Ballon d'Or wins, Champions League and international records.\",\n        \"tags\": [\"records\", \"awards\", \"goals\", \"ballon-dor\"]\n      }\n    ]\n  },\n  \"litellm_params\": {\n    \"require_trace_id_on_calls_by_agent\": true,\n    \"max_iterations\": 25,\n    \"max_budget_per_session\": 5.0\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{gateway}}/v1/agents",
+          "host": ["{{gateway}}"],
+          "path": ["v1", "agents"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('registered (200/201)', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+              "const body = pm.response.json();",
+              "const id = body.agent_id || body.id || (body.data && body.data.agent_id);",
+              "if (id) { pm.collectionVariables.set('agent_id', id); console.log('agent_id =', id); }",
+              "else { console.log('No agent_id in response - copy it from the UI or from request 04.'); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Gateway - list agents (admin key)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{admin_key}}" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{gateway}}/v1/agents",
+          "host": ["{{gateway}}"],
+          "path": ["v1", "agents"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "const list = Array.isArray(body) ? body : (body.data || []);",
+              "const match = list.find(a => a.agent_name === pm.collectionVariables.get('agent_name'));",
+              "pm.test('agent is registered', () => pm.expect(match).to.not.be.undefined);",
+              "if (match) { pm.collectionVariables.set('agent_id', match.agent_id); console.log('agent_id =', match.agent_id); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Gateway - create scoped virtual key",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{admin_key}}" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"key_alias\": \"orchestrator-poc\",\n  \"agents\": [\"{{agent_id}}\"],\n  \"max_budget\": 20.0,\n  \"rpm_limit\": 60\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{gateway}}/key/generate",
+          "host": ["{{gateway}}"],
+          "path": ["key", "generate"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('key created', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "if (body.key) { pm.collectionVariables.set('orchestrator_key', body.key); console.log('orchestrator_key set'); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Gateway - list agents (scoped key, this is the permission test)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{orchestrator_key}}" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{gateway}}/v1/agents",
+          "host": ["{{gateway}}"],
+          "path": ["v1", "agents"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 with the scoped key', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "const list = Array.isArray(body) ? body : (body.data || []);",
+              "pm.test('only agents this key may call are returned', () => {",
+              "  pm.expect(list.length).to.be.above(0);",
+              "  pm.expect(list.map(a => a.agent_name)).to.include(pm.collectionVariables.get('agent_name'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Gateway - smoke test agent (simple shape)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{orchestrator_key}}" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" },
+          { "key": "x-litellm-trace-id", "value": "{{trace_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": {\n    \"role\": \"user\",\n    \"parts\": [\n      { \"type\": \"text\", \"text\": \"who is ronaldo and what is his biography\" }\n    ]\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{gateway}}/a2a/{{agent_id}}",
+          "host": ["{{gateway}}"],
+          "path": ["a2a", "{{agent_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('trace_id')) {",
+              "  pm.collectionVariables.set('trace_id', pm.variables.replaceIn('{{$guid}}').replace(/-/g, ''));",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('agent answered through the gateway', () => pm.response.to.have.status(200));",
+              "console.log('trace id:', pm.collectionVariables.get('trace_id'));",
+              "console.log(pm.response.text().substring(0, 800));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. Gateway - smoke test agent (JSON-RPC message/send)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{orchestrator_key}}" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" },
+          { "key": "x-litellm-trace-id", "value": "{{trace_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": \"req-1\",\n  \"method\": \"message/send\",\n  \"params\": {\n    \"message\": {\n      \"messageId\": \"msg-1\",\n      \"role\": \"user\",\n      \"parts\": [\n        { \"kind\": \"text\", \"text\": \"which clubs has he played for\" }\n      ]\n    }\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{gateway}}/a2a/{{agent_id}}",
+          "host": ["{{gateway}}"],
+          "path": ["a2a", "{{agent_id}}"]
+        }
+      }
+    },
+    {
+      "name": "09. Gateway - chat/completions a2a prefix (DOES NOT WORK here - see docs 6c)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{orchestrator_key}}" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" },
+          { "key": "x-litellm-trace-id", "value": "{{trace_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"a2a/{{agent_name}}\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"what records does he hold\" }\n  ]\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{gateway}}/v1/chat/completions",
+          "host": ["{{gateway}}"],
+          "path": ["v1", "chat", "completions"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Expected to fail on a gateway holding a wildcard model (e.g. 'openai/*'):",
+              "//   403 key_model_access_denied   (key allowlist cannot match a2a/...)",
+              "//   400 no healthy deployments    (wildcard pattern routes to the LLM router first)",
+              "// Use request 08 (JSON-RPC message/send) instead.",
+              "console.log('status', pm.response.code, '- see docs/onboard-ronaldo-agent.md section 6c');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Orchestrator - health",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": {
+          "raw": "{{orchestrator_base}}/health",
+          "host": ["{{orchestrator_base}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "11. Orchestrator - list agents (as the user sees them)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{user_token}}" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{orchestrator_base}}/v1/agents",
+          "host": ["{{orchestrator_base}}"],
+          "path": ["v1", "agents"]
+        }
+      }
+    },
+    {
+      "name": "12. Orchestrator - orchestrate (end to end)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{user_token}}" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" },
+          { "key": "traceparent", "value": "00-{{trace_id}}-{{$guid}}-01" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"who is ronaldo and what is his biography\",\n  \"conversation_id\": \"conv-1\",\n  \"refresh_catalog\": true\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{orchestrator_base}}/v1/orchestrate",
+          "host": ["{{orchestrator_base}}"],
+          "path": ["v1", "orchestrate"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('orchestrator answered', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('run completed', () => pm.expect(body.status).to.eql('completed'));",
+              "console.log('trace_id:', body.trace_id);",
+              "console.log('answer:', (body.answer || '').substring(0, 500));",
+              "console.log('tasks:', JSON.stringify(body.tasks || []));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

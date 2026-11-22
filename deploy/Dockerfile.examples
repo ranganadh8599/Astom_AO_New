@@ -1,0 +1,67 @@
+# syntax=docker/dockerfile:1
+#
+# One image for both example suites: 20 A2A agents (ports 9110-9129) and 20 MCP servers
+# (ports 9301-9320).
+#
+# One image rather than 40 because every service is the same code with a different
+# `python -m ...` command and port: the suites share `mcp_suite/common.py` and the
+# `a2a_suite` server, and all three dependencies (fastapi, uvicorn, mcp). Building 40
+# images would multiply build time and disk for no isolation benefit — the processes are
+# separate containers either way.
+#
+# What is NOT here: LangGraph, psycopg, the orchestrator and any gateway credential. These
+# are backends the gateway calls; they must not hold a key.
+#
+# Build (the compose file builds it on first `up`):
+#   docker build -f deploy/Dockerfile.examples -t a2a-examples:0.1.0 .
+#
+# Run one of each:
+#   docker run --rm -p 9110:9110 -e SUITE_KIND=a2a -e PORT=9110 \
+#     a2a-examples:0.1.0 python -m a2a_suite.server --agent bicycle-repair --port 9110 \
+#       --url http://localhost:9110
+#   docker run --rm -p 9301:9301 -e SUITE_KIND=mcp -e PORT=9301 \
+#     a2a-examples:0.1.0 python -m mcp_suite.servers.warehouse_inventory --port 9301
+
+ARG PYTHON_VERSION=3.12
+
+FROM python:${PYTHON_VERSION}-slim
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    # The suites are used from source: `examples/` is the import root, exactly as
+    # `pyproject.toml` puts it on the test path.
+    PYTHONPATH=/app/examples \
+    SUITE_KIND="" \
+    PORT=""
+
+WORKDIR /app
+
+RUN apt-get update \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --create-home --uid 10001 --shell /usr/sbin/nologin suite
+
+# Versions mirror the `mcp-server` extra in pyproject.toml (mcp>=1.9); the 2.x line is what
+# `mcp_suite/common.py` is exercised against (mcp.server.mcpserver), and it still supports
+# the FastMCP fallback.
+RUN python -m pip install "fastapi>=0.115" "uvicorn>=0.30" "mcp>=2,<3"
+
+COPY --chown=suite:suite examples/a2a_suite ./examples/a2a_suite
+COPY --chown=suite:suite examples/mcp_suite ./examples/mcp_suite
+COPY --chown=suite:suite deploy/healthcheck_suites.py ./healthcheck_suites.py
+
+USER suite
+
+# No EXPOSE: the port is per-service, and a single image cannot declare 40 of them. Compose
+# publishes only what it needs (by default nothing — the gateway dials the service name).
+
+# Kind-aware probe, because the two suites fail differently: an A2A agent answers its card
+# path with 200, while an MCP endpoint is a streamable transport whose GET hangs. See the
+# script for why a TCP connect is the honest question for MCP.
+HEALTHCHECK --interval=30s --timeout=6s --start-period=15s --retries=3 \
+    CMD ["python", "/app/healthcheck_suites.py"]
+
+# No default CMD: compose sets the module per service, so a bare `docker run` fails loudly
+# instead of silently starting the wrong suite.
+CMD ["python", "-c", "import sys; sys.exit('set a command: see deploy/Dockerfile.examples')"]
