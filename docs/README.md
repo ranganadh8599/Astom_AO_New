@@ -24,6 +24,7 @@ Where to look, by what you need to do.
 |---|---|
 [user-guide.md](guides/user-guide.md) | **start here**: run the service, authenticate, ask a question, use the Postman suite, register agents / MCP servers / models, fetch agent cards |
 [deployment.md](guides/deployment.md) | containers, compose, gateway networking, health checks, backup, **and the 40-service example-suite stack** |
+[litellm-gateway-config.md](guides/litellm-gateway-config.md) | **the gateway side**: prerequisites, `config.yaml`, DB-backed search settings, grants, and every change needed to add an agent, MCP server or model |
 [onboard-ronaldo-agent.md](guides/onboard-ronaldo-agent.md) | registering an A2A agent end to end |
 [field-ops-mcp-server.md](guides/field-ops-mcp-server.md) | running and registering the sample MCP server |
 [librechat-agent-as-model.md](guides/librechat-agent-as-model.md) | exposing a LibreChat agent as a LiteLLM model |
