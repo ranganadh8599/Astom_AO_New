@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 import uuid
 from typing import Any, Mapping, Sequence
@@ -41,6 +42,32 @@ class GatewayError(RuntimeError):
 def _snippet(text: str, limit: int = 500) -> str:
     text = " ".join(text.split())
     return text[:limit]
+
+
+def temperature_lock(exc: "GatewayError") -> float | None:
+    """The temperature a model demands, if it rejected ours for that reason.
+
+    OpenAI's reasoning models (``gpt-5.6-luna``, ``gpt-6-luna``, the o-series) answer
+    ``HTTP 400 UnsupportedParamsError: <model> doesn't support temperature=0.0 while
+    reasoning is active. Only temperature=1 is supported``. LiteLLM forwards that as a
+    400, which looks identical to a malformed body — the *message* is the signal, not
+    the status code.
+
+    The value is read out of the message rather than assumed to be 1.0, so a model that
+    names a different requirement is still handled, and a future one that stops
+    mentioning temperature no longer matches at all.
+    """
+    if exc.status != 400:
+        return None
+    text = (exc.body or "").lower()
+    if "temperature" not in text:
+        return None
+    # Two spellings are in use: "<model> doesn't support temperature=0.0" for the named
+    # models and "O-series models don't support temperature=0.0" for the whole family.
+    if not re.search(r"(?:does|do)(?:n't| not)?\s+support\s+temperature", text):
+        return None
+    match = re.search(r"only temperature=([0-9.]+) is supported", text)
+    return float(match.group(1)) if match else 1.0
 
 
 def _collect_text(node: Any) -> list[str]:
@@ -157,6 +184,10 @@ class LiteLLMGateway:
         self._client = client
         self._owns_client = client is None
         self._tracer: Tracer = tracer or NullTracer()
+        # Models that reject any temperature but their reasoning default. Learned on the
+        # first 400 instead of hardcoded, so a new reasoning model works without a code
+        # change; keyed by the name the caller uses, which is what the gateway receives.
+        self._temperature_locks: dict[str, float] = {}
 
     async def __aenter__(self) -> "LiteLLMGateway":
         if self._client is None:
@@ -418,12 +449,10 @@ class LiteLLMGateway:
             "model": model,
             "messages": [{"role": "user", "content": "ok"}],
             "max_tokens": 1,
-            "temperature": 0,
+            "temperature": self._temperature_locks.get(model, 0.0),
         }
         try:
-            await self._request_json(
-                "POST", "/v1/chat/completions", trace=trace, json_body=body
-            )
+            await self._chat_completion(model, body, trace=trace)
             return "ok", ""
         except GatewayError as exc:
             detail = _snippet(exc.body) if exc.body else str(exc)
@@ -723,7 +752,7 @@ class LiteLLMGateway:
         body: dict[str, Any] = {
             "model": model,
             "messages": list(messages),
-            "temperature": temperature,
+            "temperature": self._temperature_locks.get(model, temperature),
         }
         if response_format_json:
             body["response_format"] = {"type": "json_object"}
@@ -736,13 +765,7 @@ class LiteLLMGateway:
             model=model,
             metadata={"protocol": "llm"},
         ) as span:
-            data = await self._request_json(
-                "POST",
-                "/v1/chat/completions",
-                trace=trace,
-                json_body=body,
-                extra_headers=call_headers(trace, lineage),
-            )
+            data = await self._chat_completion(model, body, trace=trace, lineage=lineage)
             choices = (data or {}).get("choices") or []
             if not choices:
                 raise GatewayError("chat completion returned no choices")
@@ -758,6 +781,44 @@ class LiteLLMGateway:
                 },
             )
             return content
+
+    async def _chat_completion(
+        self,
+        model: str,
+        body: dict[str, Any],
+        *,
+        trace: TraceContext,
+        lineage: Lineage | None = None,
+    ) -> Any:
+        """POST a chat body, absorbing the one recoverable 400: a temperature lock.
+
+        Reasoning models reject the whole request over a single unsupported parameter,
+        so the first call to such a model costs one round trip. The requirement is
+        remembered in ``_temperature_locks``, and every later call for that model is
+        correct on the first attempt.
+        """
+        extra_headers = call_headers(trace, lineage) if lineage is not None else None
+        try:
+            return await self._request_json(
+                "POST",
+                "/v1/chat/completions",
+                trace=trace,
+                json_body=body,
+                extra_headers=extra_headers,
+            )
+        except GatewayError as exc:
+            locked = temperature_lock(exc)
+            if locked is None or body.get("temperature") == locked:
+                raise
+            self._temperature_locks[model] = locked
+            body["temperature"] = locked
+            return await self._request_json(
+                "POST",
+                "/v1/chat/completions",
+                trace=trace,
+                json_body=body,
+                extra_headers=extra_headers,
+            )
 
     # -- transport --------------------------------------------------------
     async def _request_json(

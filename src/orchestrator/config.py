@@ -87,6 +87,7 @@ KNOWN_ENV = frozenset(
     {
         "LITELLM_BASE_URL", "LITELLM_API_KEY", "LITELLM_ADMIN_KEY",
         "PLANNER_MODEL", "PLANNER_TEMPERATURE", "GATE_MODEL", "MODEL_PREFLIGHT_ENABLED",
+        "GATE_TEMPERATURE", "QUERY_REWRITE_TEMPERATURE",
         "CANDIDATE_MAX_TARGETS", "RETRIEVAL_ENABLED", "RETRIEVAL_TOP_K",
         "COVERAGE_GATE_ENABLED", "RELEVANCE_GATE_ENABLED",  # legacy name, still accepted
         "QUERY_REWRITE_ENABLED", "QUERY_REWRITE_MODEL", "QUERY_REWRITE_MAX_QUERIES",
@@ -231,6 +232,13 @@ class Settings:
     # no heuristic fallback, so this must name a model the gateway serves.
     planner_model: str = ""
     planner_temperature: float = 0.0
+    # Temperature for the other two one-shot model calls. Configurable because OpenAI's
+    # reasoning models (gpt-5.6-luna, gpt-6-luna, the o-series) reject anything but the
+    # value they name — typically 1.0 — with HTTP 400. The gateway client learns that at
+    # runtime and retries, so these are an optimisation: set them to avoid the extra
+    # round trip and to make the intent explicit.
+    gate_temperature: float = 0.0
+    query_rewrite_temperature: float = 0.0
 
     # --- Model targets ---------------------------------------------------
     # LiteLLM models exposed as routable targets. Empty = only A2A agents and MCP tools
@@ -659,6 +667,8 @@ class Settings:
             litellm_admin_key=_env("LITELLM_ADMIN_KEY"),
             planner_model=_env("PLANNER_MODEL"),
             planner_temperature=_env_float_checked("PLANNER_TEMPERATURE", 0.0),
+            gate_temperature=_env_float_checked("GATE_TEMPERATURE", 0.0),
+            query_rewrite_temperature=_env_float_checked("QUERY_REWRITE_TEMPERATURE", 0.0),
             model_targets=_env_semicolon_list("MODEL_TARGETS"),
             refusal_markers=_env_list("REFUSAL_MARKERS", (
                 "beyond scope",

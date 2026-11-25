@@ -581,6 +581,41 @@ MODEL_TARGETS=mai|LibreChat agent MAI: answers questions about Alstom corporate 
 - a model that declines in words is marked failed, so merge reports the refusal instead of
   passing it off as an answer (`REFUSAL_MARKERS` extends the built-in list)
 
+### 7.5 Reasoning models and `temperature`
+
+OpenAI's reasoning models — `gpt-5.6-luna`, `gpt-6-luna`, the `o`-series — reject any
+temperature but the one they name, usually `1.0`:
+
+```
+HTTP 400 litellm.UnsupportedParamsError: gpt-5.6-luna doesn't support temperature=0.0
+while reasoning is active. Only temperature=1 is supported ...
+```
+
+The gateway client recognises that specific error, retries once at the required value and
+remembers it for the model, so any model works as planner, gate or rewrite with no config.
+The first call to such a model costs one extra round trip; every later call is correct on
+the first attempt. `MODEL_PREFLIGHT_ENABLED` reports `models.status: ok` once the same
+retry succeeds.
+
+To skip the extra round trip, set the temperatures explicitly:
+
+```dotenv
+PLANNER_MODEL=openai/gpt-5.6-luna
+PLANNER_TEMPERATURE=1
+GATE_TEMPERATURE=1
+QUERY_REWRITE_TEMPERATURE=1
+```
+
+Two related traps:
+
+- **A small `max_tokens` returns empty content**, not an error: reasoning tokens are
+  charged first, so `max_tokens: 16` can produce `finish_reason: length` with
+  `content: ""`. Leave the cap unset.
+- **`drop_params: true`** on the request (or in the gateway's `litellm_settings`) also
+  works — LiteLLM strips the unsupported parameter instead of retrying — but it hides the
+  same mistake for every other model, which is why the orchestrator retries narrowly
+  instead.
+
 ## 8. Fetch agent cards
 
 Four ways, depending on what you want to know.

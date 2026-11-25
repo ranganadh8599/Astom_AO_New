@@ -242,9 +242,12 @@ def parse_decision(raw: str) -> CoverageVerdict | None:
 class CoverageGate:
     """One LLM call that triages intent and answers only "is this covered?"."""
 
-    def __init__(self, gateway: LiteLLMGateway, model: str) -> None:
+    def __init__(
+        self, gateway: LiteLLMGateway, model: str, *, temperature: float = 0.0
+    ) -> None:
         self._gateway = gateway
         self._model = model
+        self._temperature = temperature
 
     async def assess(
         self,
@@ -270,7 +273,7 @@ class CoverageGate:
                 ],
                 trace=trace,
                 lineage=lineage,
-                temperature=0.0,
+                temperature=self._temperature,
                 response_format_json=True,
             )
         except GatewayError:

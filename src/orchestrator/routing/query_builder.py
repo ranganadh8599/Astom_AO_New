@@ -103,10 +103,18 @@ def needs_rewrite(message: str, *, has_history: bool) -> bool:
 
 
 class QueryBuilder:
-    def __init__(self, gateway: LiteLLMGateway, model: str, *, max_queries: int = 3) -> None:
+    def __init__(
+        self,
+        gateway: LiteLLMGateway,
+        model: str,
+        *,
+        max_queries: int = 3,
+        temperature: float = 0.0,
+    ) -> None:
         self._gateway = gateway
         self._model = model
         self._max_queries = max(max_queries, 1)
+        self._temperature = temperature
 
     async def build(
         self,
@@ -138,7 +146,7 @@ class QueryBuilder:
                 ],
                 trace=trace,
                 lineage=lineage,
-                temperature=0.0,
+                temperature=self._temperature,
                 response_format_json=True,
             )
         except GatewayError:

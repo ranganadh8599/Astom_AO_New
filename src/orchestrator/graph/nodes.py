@@ -127,12 +127,15 @@ class OrchestratorNodes:
         self._settings = settings
         self._gateway = gateway
         self._catalog = catalog
-        self._gate = CoverageGate(gateway, settings.effective_gate_model)
+        self._gate = CoverageGate(
+            gateway, settings.effective_gate_model, temperature=settings.gate_temperature
+        )
         self._query_builder = (
             QueryBuilder(
                 gateway,
                 settings.effective_rewrite_model,
                 max_queries=settings.query_rewrite_max_queries,
+                temperature=settings.query_rewrite_temperature,
             )
             if settings.can_rewrite_queries
             else None
