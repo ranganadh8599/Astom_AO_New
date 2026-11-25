@@ -1,0 +1,217 @@
+================================================================
+A2A ORCHESTRATION POC - MANUAL TEST QUERIES
+Catalogue under test:
+  ronaldo-agent   -> A2A agent   (biography, career, awards)
+  field_ops       -> MCP server (get_asset_status,
+                                list_open_incidents,
+                                get_asset_maintenance_history)
+  mai             -> Model      (Alstom corporate facts)
+Updated: 2026-11-23
+================================================================
+
+HOW TO RUN
+----------
+UI   : LibreChat  http://localhost:3082  -> model "A2A Orchestrator"
+API  : POST http://localhost:8001/v1/orchestrate
+       Authorization: Bearer <ORCH_SHARED_KEY>
+       x-librechat-user-id: <any-user-id>     (required in shared_key mode)
+       body: {"message":"...","conversation_id":"...","refresh_catalog":true}
+
+PASS CRITERIA CHEAT-SHEET
+-------------------------
+  greeting        -> 0 tasks, status completed
+  single          -> exactly 1 task, correct target
+  combined        -> 2+ tasks in ONE run, answer has one ### <target> section each
+  greeting+ask    -> greeting adds NO extra task
+  mutation        -> status "rejected", 0 tasks
+  negative        -> "Nothing in the registered catalogue covers that request."
+
+
+================================================================
+1. GREETING / SMALLTALK  (expect 0 tasks, answered directly)
+================================================================
+
+G1   hi
+G2   what can you do?
+G3   thanks, that helps
+G4   good morning
+G5   who are you?
+
+
+================================================================
+2. SINGLE - A2A ONLY  (expect target: ronaldo-agent)
+================================================================
+
+A1   who is ronaldo
+A2   which clubs has he played for
+A3   who is rolando                          (typo; still routes, agent scope-refusal)
+A4   what awards and trophies has ronaldo won
+A5   where was ronaldo born
+A6   tell me about ronaldo's early life
+A7   what records does ronaldo hold          (* known bug: returns "Who he is")
+
+
+================================================================
+3. SINGLE - MCP ONLY  (expect target: field_ops-<tool>)
+================================================================
+
+M1   what is the status of PUMP-1042?
+M2   what is the status of PUMP-2077?
+M3   list open incidents in Rotterdam
+M4   any open incidents in Lyon?
+M5   show maintenance history for VALVE-3310
+M6   show maintenance history for PUMP-1042
+M7   is VALVE-3310 healthy?
+
+
+================================================================
+4. SINGLE - MODEL ONLY  (expect target: mai)
+================================================================
+
+D1   where is Alstom located?
+D2   what is Alstom's main office?
+D3   tell me about Alstom as a company
+
+
+================================================================
+5. COMBINED FAN-OUT  (expect 2+ tasks, single run)
+================================================================
+
+X1   who is ronaldo and what is the status of PUMP-2077?
+X2   what awards has ronaldo won and any open incidents in Rotterdam?
+X3   where is Alstom located and what is the status of PUMP-1042?
+X4   who is ronaldo, where is Alstom located, and list open incidents in Lyon?
+X5   what is the status of PUMP-1042 and show maintenance history for VALVE-3310?
+
+
+================================================================
+6. GREETING + REAL QUESTION IN ONE MESSAGE
+================================================================
+
+XG1  hi! which clubs did Ronaldo play for, and are there open incidents in Lyon?
+XG2  good morning, any open incidents in Rotterdam?
+XG3  thanks! what's the status of PUMP-1042?
+XG4  hello, who is ronaldo and where is Alstom located?
+XG5  hey there, what awards has ronaldo won?
+
+
+================================================================
+7. MULTI-TURN  (use ONE LibreChat conversation per block)
+================================================================
+
+--- MT-A : A2A follow-up resolution ---
+turn 1   who is ronaldo
+turn 2   which clubs did he play for?
+turn 3   and his records?                  (* known bug: falls back to identity)
+
+--- MT-M : MCP follow-up (strongest multi-turn signal) ---
+turn 1   what is the status of PUMP-1042?
+turn 2   and PUMP-2077?
+turn 3   any incidents for it?             (* known bug: duplicate task)
+
+--- MT-X : mixed surfaces across turns ---
+turn 1   hi
+turn 2   where is Alstom located?
+turn 3   who is ronaldo?
+turn 4   any open incidents in Lyon?
+
+--- MT-C : combined then follow-up ---
+turn 1   who is ronaldo and what is the status of PUMP-1042?
+turn 2   and the incidents in Rotterdam?
+turn 3   thanks, what about Alstom?
+
+
+================================================================
+8. MUTATION / APPROVAL  (expect status "rejected", 0 tasks)
+================================================================
+
+W1   update the status of PUMP-1042 to out of service
+W2   delete all open incidents in Rotterdam
+W3   create a ticket for PUMP-2077
+W4   approve my leave request
+W5   please reassign INC-8790 to Rotterdam
+W6   cancel the maintenance scheduled for VALVE-3310
+W7   close incident INC-8841
+W8   change the site of VALVE-3310 to Lyon
+
+EXPECTED TEXT:
+  "I can't carry out that change. This orchestrator is read-only: it answers
+   questions and never creates, updates, deletes or approves anything, and it
+   has no approval workflow..."
+
+--- READ vs WRITE CONTRAST (these must NOT be rejected) ---
+C1   how do I update my address?            -> read, routed / no-match
+C2   who approves expense claims?           -> read, expected no-match
+C3   what is the approval status of INC-8790?  -> read, should route to field_ops
+
+
+================================================================
+9. NEGATIVE / COVERAGE  (expect "Nothing in the registered catalogue...")
+================================================================
+
+N1   what is the weather in Paris?
+N2   write me a poem about football
+N3   translate this to French
+N4   what is 12% of 90
+N5   who is the president of France?
+N6   summarise this paragraph: <paste any text>
+
+
+================================================================
+10. ONE-SHOT RUNNER (PowerShell, from repo root)
+================================================================
+
+@'
+import sys; sys.path[:0] = ['src']
+from orchestrator.config import Settings, load_dotenv
+import httpx
+load_dotenv(); s = Settings.from_env()
+h = {'authorization': f'Bearer {s.orch_shared_key}', 'x-librechat-user-id': 'poc-user'}
+c = httpx.Client(base_url='http://localhost:8001', headers=h, timeout=300)
+
+CASES = [
+  ("G1",  "hi"),
+  ("G2",  "what can you do?"),
+  ("A1",  "who is ronaldo"),
+  ("A2",  "which clubs has he played for"),
+  ("M1",  "what is the status of PUMP-1042?"),
+  ("M3",  "list open incidents in Rotterdam"),
+  ("M5",  "show maintenance history for VALVE-3310"),
+  ("D1",  "where is Alstom located?"),
+  ("X1",  "who is ronaldo and what is the status of PUMP-2077?"),
+  ("XG1", "hi! which clubs did Ronaldo play for, and are there open incidents in Lyon?"),
+  ("W1",  "update the status of PUMP-1042 to out of service"),
+  ("N1",  "what is the weather in Paris?"),
+]
+for label, q in CASES:
+    d = c.post('/v1/orchestrate', json={'message': q,
+                                        'conversation_id': f'test-{label}',
+                                        'refresh_catalog': True}).json()
+    print(f"[{label}] {d['status']:<10} "
+          f"{[t['agent_name'] for t in d.get('tasks', [])]}  {q}")
+'@ | .\.venv\Scripts\python.exe -
+
+
+================================================================
+11. KNOWN DEFECTS THESE TESTS EXPOSE
+================================================================
+
+1. A7 "what records does ronaldo hold"
+   -> routes fine, but the agent returns the "Who he is" block.
+      Cause: keyword tie (identity vs records) resolved by index order
+      in examples/ronaldo_agent/knowledge.py -> match_topics().
+
+2. MT-M turn 3 "any incidents for it?"
+   -> two identical field_ops-list_open_incidents tasks in one run
+      (planner does not dedupe).
+
+3. MT-A turn 3 "and his records?"
+   -> follow-up rewrite loses the topic; lands on identity.
+
+4. A3 "who is rolando" (typo)
+   -> routes to ronaldo-agent but agent has no fuzzy matching, so it
+      returns its out-of-scope text. Not an orchestrator failure.
+
+================================================================
+END OF FILE
+================================================================
