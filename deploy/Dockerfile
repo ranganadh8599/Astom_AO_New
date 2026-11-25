@@ -12,7 +12,7 @@
 # Build:
 #   docker build -f deploy/Dockerfile -t a2a-orchestrator:0.1.0 .
 # Run (see docker-compose.yml for the full stack):
-#   docker run --rm -p 8000:8000 \
+#   docker run --rm -p 8001:8001 \
 #     -e LITELLM_BASE_URL=http://host.docker.internal:4001 \
 #     -e LITELLM_API_KEY=sk-... \
 #     -e PLANNER_MODEL=openai/gpt-4o-mini \
@@ -79,14 +79,14 @@ COPY --chown=orchestrator:orchestrator .env.example ./
 
 USER orchestrator
 
-EXPOSE 8000
+EXPOSE 8001
 
 # Readiness, not liveness: /ready is what knows whether the checkpointer can reach its
 # database. Liveness would restart the container over a DB blip.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD curl -fsS http://127.0.0.1:8000/ready || exit 1
+    CMD curl -fsS http://127.0.0.1:8001/ready || exit 1
 
 # The wrapper sets loop_factory explicitly. Replace with `--log-level debug` etc. via
 # command: in compose; arguments are appended to the module invocation.
 ENTRYPOINT ["python", "-m", "orchestrator"]
-CMD ["--host", "0.0.0.0", "--port", "8000"]
+CMD ["--host", "0.0.0.0", "--port", "8001"]

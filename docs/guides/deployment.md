@@ -23,7 +23,7 @@ $env:ORCH_SHARED_KEY  = "..."      # what LibreChat sends as apiKey, min 32 char
 
 docker compose up -d --build
 docker compose ps
-curl -s localhost:8000/health | jq
+curl -s localhost:8001/health | jq
 ```
 
 Expected:
@@ -160,7 +160,7 @@ container cannot mint keys or rewrite agent registrations.
 
 ```powershell
 docker build -t a2a-orchestrator:0.1.0 .
-docker run --rm -p 8000:8000 `
+docker run --rm -p 8001:8001 `
   -e LITELLM_BASE_URL=http://host.docker.internal:4001 `
   -e LITELLM_API_KEY=sk-... `
   -e PLANNER_MODEL=openai/gpt-4o-mini `

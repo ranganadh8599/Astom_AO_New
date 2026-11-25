@@ -11,7 +11,7 @@ Requests that change state are **not** replayed — their examples are marked
 
 | Variable | Example |
 |---|---|
-| `orchestrator` | `http://localhost:8000` |
+| `orchestrator` | `http://localhost:8001` |
 | `litellm` | `http://localhost:4001` |
 | `librechat` | `http://localhost:3081` |
 | `langfuse` | `https://cloud.langfuse.com` |

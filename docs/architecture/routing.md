@@ -344,7 +344,7 @@ readiness on `degraded` would remove healthy instances because the *gateway* hic
 
 ```yaml
 livenessProbe:  { httpGet: { path: /health } }
-readinessProbe: { httpGet: { path: /ready, port: 8000 } }
+readinessProbe: { httpGet: { path: /ready, port: 8001 } }
 ```
 
 `/health` also carries `memory_state`, the **cached** probe result — never a live query, so

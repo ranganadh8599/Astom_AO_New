@@ -7,7 +7,7 @@ Everything below is copy-pasteable on Windows PowerShell from the repository roo
 Where the command differs on Linux/macOS it is called out.
 
 ```
-LibreChat ──► orchestrator (:8000) ──► LiteLLM gateway (:4001) ──► A2A agents / MCP servers / models
+LibreChat ──► orchestrator (:8001) ──► LiteLLM gateway (:4001) ──► A2A agents / MCP servers / models
 ```
 
 The orchestrator holds **one scoped virtual key**. Registration and key management need
@@ -16,7 +16,7 @@ runtime settings.
 
 | Thing | Default address | Who talks to it |
 |---|---|---|
-`orchestrator` | `http://localhost:8000` | LibreChat, Postman, CLI |
+`orchestrator` | `http://localhost:8001` | LibreChat, Postman, CLI |
 `LiteLLM gateway` | `http://localhost:4001` | orchestrator only (at runtime) |
 `field-ops` MCP server | `http://localhost:9200/mcp` | gateway |
 `ronaldo-agent` A2A agent | `http://localhost:9103` | gateway |
@@ -85,7 +85,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 
 Copy-Item .env.example .env     # first time only, then edit
-.\.venv\Scripts\python.exe -m orchestrator --port 8000
+.\.venv\Scripts\python.exe -m orchestrator --port 8001
 ```
 
 Minimum `.env` values:
@@ -103,14 +103,14 @@ Notes:
 - Use `python -m orchestrator`, **not** plain `uvicorn`, on Windows. It supplies
   `SelectorEventLoop`, which `psycopg` needs when `CHECKPOINT_BACKEND=postgres`.
   With the default `memory` backend, `uvicorn orchestrator.api.app:app --reload` works too.
-- If the container is already on port 8000, run the host process on `--port 8001`.
+- If the container is already on port 8001, run the host process on `--port 8002`.
 - `--reload` is intentionally not supported by `python -m orchestrator`.
 - Postgres memory is optional: `pip install -e ".[postgres]"`.
 
 ### 1.3 Check that it is up
 
 ```powershell
-curl.exe -s http://localhost:8000/health
+curl.exe -s http://localhost:8001/health
 ```
 
 ```json
@@ -180,7 +180,7 @@ preflight, prints JSON, and exits non-zero unless `status` is `completed`. Use
 ### 3.2 HTTP — the native endpoint
 
 ```powershell
-curl.exe -s http://localhost:8000/v1/orchestrate `
+curl.exe -s http://localhost:8001/v1/orchestrate `
   -H "Authorization: Bearer $token" `
   -H "Content-Type: application/json" `
   -d '{"message":"who is ronaldo?","conversation_id":"conv-1"}'
@@ -188,7 +188,7 @@ curl.exe -s http://localhost:8000/v1/orchestrate `
 
 ```powershell
 # shared_key mode instead of a dev token
-Invoke-RestMethod -Method Post -Uri http://localhost:8000/v1/orchestrate `
+Invoke-RestMethod -Method Post -Uri http://localhost:8001/v1/orchestrate `
   -Headers $headers `
   -Body '{"message":"who is ronaldo?","conversation_id":"conv-1"}'
 ```
@@ -206,7 +206,7 @@ LibreChat-style clients call `/v1/chat/completions`; streaming is supported (one
 delta containing the complete answer).
 
 ```powershell
-curl.exe -s http://localhost:8000/v1/chat/completions `
+curl.exe -s http://localhost:8001/v1/chat/completions `
   -H "Authorization: Bearer $token" `
   -H "Content-Type: application/json" `
   -d '{"model":"a2a-orchestrator","messages":[{"role":"user","content":"who is ronaldo?"}],"stream":false}'
@@ -219,8 +219,8 @@ history. Send the conversation id in the body (`conversation_id`) or in the
 ### 3.4 Discovery endpoints
 
 ```powershell
-curl.exe -s http://localhost:8000/v1/agents       -H "Authorization: Bearer $token"
-curl.exe -s http://localhost:8000/v1/capabilities -H "Authorization: Bearer $token"
+curl.exe -s http://localhost:8001/v1/agents       -H "Authorization: Bearer $token"
+curl.exe -s http://localhost:8001/v1/capabilities -H "Authorization: Bearer $token"
 ```
 
 `/v1/agents` lists what the key can reach, with skills. `/v1/capabilities` reports what the
@@ -244,7 +244,7 @@ Postman → **Import** → **File** → select the JSON. Open the collection →
 | Variable | Value | Needed for |
 |---|---|---|
 `litellm` | `http://localhost:4001` | all gateway calls |
-`orchestrator` | `http://localhost:8000` | folders 08–10, 16 |
+`orchestrator` | `http://localhost:8001` | folders 08–10, 16 |
 `litellm_admin_key` | gateway master key | 01, 04, 12, 14, 15 |
 `litellm_virtual_key` | the orchestrator's scoped key | 02, 05, 07 |
 `orch_shared_key` | `ORCH_SHARED_KEY` | 08–10, 16 |
@@ -409,7 +409,7 @@ restriction can reach every agent.
 ### 5.7 Call it through the orchestrator
 
 ```powershell
-curl.exe -s http://localhost:8000/v1/orchestrate `
+curl.exe -s http://localhost:8001/v1/orchestrate `
   -H "Authorization: Bearer $token" `
   -H "Content-Type: application/json" `
   -d '{"message":"who is ronaldo and what records does he hold?","conversation_id":"conv-1"}'
@@ -639,7 +639,7 @@ curl.exe -s "http://localhost:4001/a2a/$id/.well-known/agent-card.json" `
   -H "Authorization: Bearer $env:LITELLM_API_KEY"
 
 # what the orchestrator sees
-curl.exe -s http://localhost:8000/v1/agents -H "Authorization: Bearer $token"
+curl.exe -s http://localhost:8001/v1/agents -H "Authorization: Bearer $token"
 ```
 
 The gateway-served card is curated: its `url` is rewritten to the gateway hop, and

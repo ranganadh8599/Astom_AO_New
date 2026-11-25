@@ -28,7 +28,7 @@ POSTGRES_DSN=postgresql://user:pass@host:5432/orchestrator
 
 ```powershell
 # NOT the uvicorn CLI — see the Windows section below
-.\.venv\Scripts\python.exe -m orchestrator --port 8000
+.\.venv\Scripts\python.exe -m orchestrator --port 8001
 ```
 
 A bad DSN fails **boot**, not the first request. That is deliberate: `open_checkpointer`

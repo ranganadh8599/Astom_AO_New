@@ -105,7 +105,7 @@ the shape is:
 custom:
   - name: 'A2A Orchestrator'
     apiKey: '${ORCH_KEY}'                          # → Authorization: Bearer ${ORCH_KEY}
-    baseURL: 'http://host.docker.internal:8000/v1'
+    baseURL: 'http://host.docker.internal:8001/v1'
     headers:
       X-LibreChat-User-Id: '{{LIBRECHAT_USER_ID}}'
       X-LibreChat-User-Email: '{{LIBRECHAT_USER_EMAIL}}'
@@ -252,7 +252,7 @@ answer text is the refusal, and `denied: true` appears only in the non-streaming
 python -c "import hashlib; print(hashlib.sha256(b'<message-id>').hexdigest()[:32])"
 
 # 2. the id the orchestrator reports for the same message
-curl -s -X POST http://localhost:8000/v1/orchestrate `
+curl -s -X POST http://localhost:8001/v1/orchestrate `
   -H "Authorization: Bearer $env:ORCH_KEY" -H "Content-Type: application/json" `
   -H "X-LibreChat-Message-Id: <message-id>" -H "X-LibreChat-Conversation-Id: conv-abc" `
   -d '{"message":"leave days?","conversation_id":"conv-abc"}' | Select-String trace_id

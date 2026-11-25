@@ -31,7 +31,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 Copy-Item .env.example .env       # set LITELLM_BASE_URL, LITELLM_API_KEY, PLANNER_MODEL
 .\.venv\Scripts\python.exe -m orchestrator.admin.cli "how many annual leave days do I get?"
-.\.venv\Scripts\python.exe -m orchestrator --port 8000      # serve it for LibreChat
+.\.venv\Scripts\python.exe -m orchestrator --port 8001      # serve it for LibreChat
 ```
 
 Containers (orchestrator + Postgres + the two sample backends): `docker compose up -d --build`.
@@ -46,7 +46,7 @@ Step-by-step for a new user — start, authenticate, call, Postman, and register
 MCP servers and models: [docs/guides/user-guide.md](docs/guides/user-guide.md).
 
 ```powershell
-curl -X POST http://localhost:8000/v1/orchestrate `
+curl -X POST http://localhost:8001/v1/orchestrate `
   -H "Authorization: Bearer $env:ORCH_TOKEN" -H "Content-Type: application/json" `
   -d '{"message":"leave days and expense status?","conversation_id":"conv-1"}'
 ```

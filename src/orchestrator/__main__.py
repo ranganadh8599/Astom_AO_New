@@ -54,7 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Run the A2A orchestrator API server",
     )
     parser.add_argument("--host", default="0.0.0.0", help="bind address (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8000, help="bind port (default: 8000)")
+    parser.add_argument("--port", type=int, default=8001, help="bind port (default: 8001)")
     parser.add_argument(
         "--log-level",
         default="info",

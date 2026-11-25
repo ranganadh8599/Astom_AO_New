@@ -92,7 +92,7 @@ def test_main_returns_zero_after_serving(monkeypatch) -> None:
 def test_defaults_match_the_documented_command() -> None:
     args = entry.build_parser().parse_args([])
 
-    assert (args.host, args.port) == ("0.0.0.0", 8000)
+    assert (args.host, args.port) == ("0.0.0.0", 8001)
     assert args.log_level == "info"
 
 

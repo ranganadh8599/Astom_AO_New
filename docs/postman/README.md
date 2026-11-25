@@ -43,7 +43,7 @@ holding a placeholder.
 | Variable | Where to get it | Required |
 |---|---|---|
 `litellm` | gateway base URL, e.g. `http://localhost:4001` | yes |
-`orchestrator` | `http://localhost:8000` | yes |
+`orchestrator` | `http://localhost:8001` | yes |
 `librechat` | `http://localhost:3081` | folder 11 |
 `litellm_admin_key` | gateway master key | folders 01, 04, 12, 14, 15 |
 `litellm_virtual_key` | the orchestrator's scoped key | folders 02, 05, 07 |

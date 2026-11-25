@@ -7,7 +7,7 @@
   "variable": [
     { "key": "agent_base", "value": "http://localhost:9103", "type": "string" },
     { "key": "gateway", "value": "http://localhost:4001", "type": "string" },
-    { "key": "orchestrator_base", "value": "http://localhost:8000", "type": "string" },
+    { "key": "orchestrator_base", "value": "http://localhost:8001", "type": "string" },
     { "key": "admin_key", "value": "", "type": "string" },
     { "key": "orchestrator_key", "value": "", "type": "string" },
     { "key": "agent_id", "value": "", "type": "string" },

@@ -6934,7 +6934,7 @@
                 }
               }
             },
-            "description": "**Manual gate \u2014 only meaningful after a restart.** Asserts that state written by a previous *process* is still readable.\n\n1. run request 08 (seeds the conversation, captures the asset)\n2. stop the listener\n3. `\\.venv\\Scripts\\python.exe -m orchestrator --port 8000`\n4. run this request\n\n**Without steps 2\u20133 the conversation is still in memory, so this cannot prove persistence.** The test accepts exactly two documented outcomes: state restored (the gate was exercised) or the same-process control (turn did not complete, no asset resolved). Anything else is a real failure.\n\n```powershell\nGet-NetTCPConnection -LocalPort 8000 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\n\\.venv\\Scripts\\python.exe -m orchestrator --port 8000\n```\n\nIf it fails *after* a genuine restart: check request 00 (`memory` really `postgres`?), then whether `POSTGRES_DSN` names the database you are inspecting. Only then suspect the checkpointer."
+            "description": "**Manual gate \u2014 only meaningful after a restart.** Asserts that state written by a previous *process* is still readable.\n\n1. run request 08 (seeds the conversation, captures the asset)\n2. stop the listener\n3. `\\.venv\\Scripts\\python.exe -m orchestrator --port 8001`\n4. run this request\n\n**Without steps 2\u20133 the conversation is still in memory, so this cannot prove persistence.** The test accepts exactly two documented outcomes: state restored (the gate was exercised) or the same-process control (turn did not complete, no asset resolved). Anything else is a real failure.\n\n```powershell\nGet-NetTCPConnection -LocalPort 8001 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\n\\.venv\\Scripts\\python.exe -m orchestrator --port 8001\n```\n\nIf it fails *after* a genuine restart: check request 00 (`memory` really `postgres`?), then whether `POSTGRES_DSN` names the database you are inspecting. Only then suspect the checkpointer."
           },
           "event": [
             {
@@ -7256,7 +7256,7 @@
   "variable": [
     {
       "key": "orchestrator",
-      "value": "http://localhost:8000"
+      "value": "http://localhost:8001"
     },
     {
       "key": "litellm",

@@ -21,7 +21,7 @@ Ready-made collection: [ronaldo-onboarding.postman_collection.json](../postman/r
 |---|---|
 | `agent_base` | `http://localhost:9103` |
 | `gateway` | `http://localhost:4001` |
-| `orchestrator_base` | `http://localhost:8000` |
+| `orchestrator_base` | `http://localhost:8001` |
 | `admin_key` | your LiteLLM **master/admin** key |
 | `orchestrator_key` | filled in after step 4 |
 | `agent_id` | filled in after step 3 |
@@ -320,7 +320,7 @@ regarded as one of the greatest players of all time.
 Start it first:
 
 ```powershell
-python -m uvicorn orchestrator.api.app:app --port 8000
+python -m uvicorn orchestrator.api.app:app --port 8001
 ```
 
 ### `GET {{orchestrator_base}}/health`

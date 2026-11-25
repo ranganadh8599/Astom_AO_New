@@ -2,7 +2,7 @@
 #
 #   docker compose up -d --build
 #   docker compose ps
-#   curl -s localhost:8000/health | jq
+#   curl -s localhost:8001/health | jq
 #
 # What is deliberately NOT here
 # -----------------------------
@@ -59,7 +59,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "${ORCHESTRATOR_PORT:-8000}:8000"
+      - "${ORCHESTRATOR_PORT:-8001}:8001"
     environment:
       # --- gateway ---
       # NOTE: docker compose reads the project `.env` for ${...} substitution, and that

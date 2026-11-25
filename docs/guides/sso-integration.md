@@ -14,7 +14,7 @@ endpoints:
     - name: 'A2A Orchestrator'
       # Required by LibreChat's schema; superseded by the Authorization header below.
       apiKey: 'unused-orchestrator-validates-jwt'
-      baseURL: 'http://host.docker.internal:8000/v1'
+      baseURL: 'http://host.docker.internal:8001/v1'
       headers:
         Authorization: 'Bearer {{LIBRECHAT_OPENID_ACCESS_TOKEN}}'
         X-LibreChat-Message-Id: '{{LIBRECHAT_BODY_MESSAGEID}}'
@@ -55,7 +55,7 @@ endpoints:
   custom:
     - name: 'A2A Orchestrator'
       apiKey: '${ORCH_KEY}'                 # → Authorization: Bearer ${ORCH_KEY}
-      baseURL: 'http://host.docker.internal:8000/v1'
+      baseURL: 'http://host.docker.internal:8001/v1'
       headers:
         X-LibreChat-User-Id: '{{LIBRECHAT_USER_ID}}'
         X-LibreChat-User-Email: '{{LIBRECHAT_USER_EMAIL}}'
